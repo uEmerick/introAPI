@@ -6,10 +6,12 @@ namespace IntroAPI.Services
     public class AlunoService
     {
         private readonly AlunoRepository _alunoRepository;
+        private readonly ILogger<AlunoService> _logger;
 
-        public AlunoService(AlunoRepository alunoRepository)
+        public AlunoService(AlunoRepository alunoRepository, ILogger<AlunoService> logger)
         {
             _alunoRepository = alunoRepository;
+            _logger = logger;
         }
 
         public bool Criar(Aluno aluno)
@@ -69,6 +71,87 @@ namespace IntroAPI.Services
         public bool AlunoExistente(string cpf)
         {
             return _alunoRepository.AlunoExistente(cpf);
+        }
+
+        /// <summary>
+        /// Faz upload da foto de um aluno
+        /// </summary>
+        public bool SalvarFoto(int alunoId, IFormFile arquivo)
+        {
+            if (arquivo == null || arquivo.Length == 0)
+                throw new ArgumentException("O arquivo de foto é inválido.");
+
+            // Validação: aceitar apenas imagens
+            var extensoesPermitidas = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
+            var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
+
+            if (!extensoesPermitidas.Contains(extensao))
+                throw new ArgumentException("Apenas imagens (JPG, PNG, GIF, BMP) são permitidas.");
+
+            // Validação: tamanho máximo 5MB
+            const long maxFileSize = 5 * 1024 * 1024; // 5MB
+            if (arquivo.Length > maxFileSize)
+                throw new ArgumentException("A foto não pode exceder 5MB.");
+
+            try
+            {
+                using var stream = new MemoryStream();
+                arquivo.CopyTo(stream);
+                byte[] fotoBytes = stream.ToArray();
+
+                _logger.LogInformation("Foto do aluno {alunoId} carregada com sucesso. Tamanho: {tamanho} bytes", alunoId, fotoBytes.Length);
+
+                return _alunoRepository.SalvarFoto(alunoId, fotoBytes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao salvar foto do aluno {alunoId}", alunoId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Obtém a foto de um aluno em base64
+        /// </summary>
+        public string? ObterFotoBase64(int alunoId)
+        {
+            try
+            {
+                var aluno = _alunoRepository.Obter(alunoId);
+
+                if (aluno == null)
+                    throw new ArgumentException("Aluno não encontrado.");
+
+                if (aluno.Foto == null || aluno.Foto.Length == 0)
+                    return null;
+
+                string base64 = Convert.ToBase64String(aluno.Foto);
+                _logger.LogInformation("Foto do aluno {alunoId} retornada em base64", alunoId);
+
+                return base64;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter foto do aluno {alunoId}", alunoId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Deleta a foto de um aluno
+        /// </summary>
+        public bool DeletarFoto(int alunoId)
+        {
+            try
+            {
+                _logger.LogInformation("Foto do aluno {alunoId} deletada", alunoId);
+                return _alunoRepository.DeletarFoto(alunoId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao deletar foto do aluno {alunoId}", alunoId);
+                throw;
+            }
         }
     }
 }

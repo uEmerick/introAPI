@@ -8,7 +8,8 @@
       "applicationUrl": "http://localhost:5173",
       "launchUrl": "doc",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "STRING_CONEXAO": "Server=jdbc:mysql://129.146.113.34:3306/aluno3;Database=aluno3;Uid=topicosbsi2026;Pwd=topicosbsi2026;Port=3306;"
       }
     }
   }

@@ -275,6 +275,59 @@ namespace IntroAPI.Repository
             return conta;
         }
 
+        /// <summary>
+        /// Salva a foto de um aluno
+        /// </summary>
+        public bool SalvarFoto(int alunoId, byte[] fotoBytes)
+        {
+            bool sucesso = false;
+
+            try
+            {
+                using (var cmd = _context.GetConnection().CreateCommand())
+                {
+                    cmd.CommandText = @"UPDATE Aluno SET Foto = @Foto WHERE Id = @Id";
+                    cmd.Parameters.AddWithValue("@Id", alunoId);
+                    cmd.Parameters.AddWithValue("@Foto", fotoBytes);
+
+                    int linhasAfetadas = cmd.ExecuteNonQuery();
+                    sucesso = linhasAfetadas > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Erro ao salvar foto do aluno: {ex.Message}", ex);
+            }
+
+            return sucesso;
+        }
+
+        /// <summary>
+        /// Deleta a foto de um aluno
+        /// </summary>
+        public bool DeletarFoto(int alunoId)
+        {
+            bool sucesso = false;
+
+            try
+            {
+                using (var cmd = _context.GetConnection().CreateCommand())
+                {
+                    cmd.CommandText = @"UPDATE Aluno SET Foto = NULL WHERE Id = @Id";
+                    cmd.Parameters.AddWithValue("@Id", alunoId);
+
+                    int linhasAfetadas = cmd.ExecuteNonQuery();
+                    sucesso = linhasAfetadas > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Erro ao deletar foto do aluno: {ex.Message}", ex);
+            }
+
+            return sucesso;
+        }
+
 
     }
 }

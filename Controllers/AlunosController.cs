@@ -8,7 +8,7 @@ namespace IntroController.Controllers
 {
 
     /// <summary>
-    /// Gerencimetno de alunos
+    /// Gerenciamento de alunos
     /// </summary>
     [Route("[controller]")]
     [ApiController]
@@ -297,7 +297,118 @@ namespace IntroController.Controllers
                 _alunoService.Excluir(id);
 
                return NoContent();
-               
+
+            }
+            catch (Exception ex)
+            {
+                return Problem(
+                    title: "Erro inesperado",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+        }
+
+        /// <summary>
+        /// Faz upload da foto de um aluno
+        /// </summary>
+        [HttpPost("{id}/foto")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public IActionResult UploadFoto(int id, [FromForm] IFormFile arquivo)
+        {
+            try
+            {
+                if (id <= 0)
+                    return BadRequest(new { erro = "Id inválido" });
+
+                if (arquivo == null)
+                    return BadRequest(new { erro = "Arquivo não fornecido" });
+
+                var alunoExistente = _alunoService.Obter(id);
+                if (alunoExistente == null)
+                    return NotFound(new { erro = "Aluno não encontrado" });
+
+                bool resultado = _alunoService.SalvarFoto(id, arquivo);
+
+                if (resultado)
+                    return Ok(new { mensagem = "Foto enviada com sucesso" });
+
+                return BadRequest(new { erro = "Falha ao salvar a foto" });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { erro = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return Problem(
+                    title: "Erro inesperado",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+        }
+
+        /// <summary>
+        /// Retorna a foto de um aluno em base64
+        /// </summary>
+        [HttpGet("{id}/foto")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public IActionResult ObterFoto(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                    return BadRequest(new { erro = "Id inválido" });
+
+                string? fotoBase64 = _alunoService.ObterFotoBase64(id);
+
+                if (string.IsNullOrEmpty(fotoBase64))
+                    return NotFound(new { erro = "Foto não encontrada para este aluno" });
+
+                return Ok(new { foto = fotoBase64 });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { erro = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return Problem(
+                    title: "Erro inesperado",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+        }
+
+        /// <summary>
+        /// Deleta a foto de um aluno
+        /// </summary>
+        [HttpDelete("{id}/foto")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public IActionResult DeletarFoto(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                    return BadRequest(new { erro = "Id inválido" });
+
+                bool resultado = _alunoService.DeletarFoto(id);
+
+                if (resultado)
+                    return NoContent();
+
+                return NotFound(new { erro = "Aluno não encontrado" });
             }
             catch (Exception ex)
             {
