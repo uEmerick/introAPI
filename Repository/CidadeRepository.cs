@@ -1,5 +1,6 @@
 ﻿using IntroAPI.Entidades;
 using MySql.Data.MySqlClient;
+using System.Text;
 
 namespace IntroAPI.Repository
 {
@@ -20,35 +21,46 @@ namespace IntroAPI.Repository
             try
             {
                 var conexao = _context.GetConnection();
-
-                // 1. Inicia a transação na conexão
                 transaction = conexao.BeginTransaction();
 
-                using (var cmd = conexao.CreateCommand())
+                int tamanhoLote = 1000;
+
+                for (int i = 0; i < cidades.Count; i += tamanhoLote)
                 {
-                    // 2. OBRIGATÓRIO: Associa a transação ao comando MySqlCommand
+                    var lote = cidades.Skip(i).Take(tamanhoLote).ToList();
+
+                    using var cmd = conexao.CreateCommand();
                     cmd.Transaction = transaction;
 
-                    cmd.CommandText = @"INSERT INTO Cidade (CidadeId, Nome, Sigla, IBGEMunicipio, Latitude, Longitude)
-                                        VALUES (@CidadeId, @Nome, @Sigla, @IBGEMunicipio, @Latitude, @Longitude)";
+                    var sqlBuilder = new StringBuilder();
+                    sqlBuilder.AppendLine(@"INSERT INTO Cidade (CidadeId, Nome, Sigla, IBGEMunicipio, Latitude, Longitude) VALUES ");
 
-                    foreach (var cidade in cidades)
+                    for (int j = 0; j < lote.Count; j++)
                     {
-                        cmd.Parameters.Clear();
-                        cmd.Parameters.AddWithValue("@CidadeId", cidade.CidadeId);
-                        cmd.Parameters.AddWithValue("@Nome", cidade.Nome);
-                        cmd.Parameters.AddWithValue("@Sigla", cidade.Sigla);
-                        cmd.Parameters.AddWithValue("@IBGEMunicipio", cidade.IBGEMunicipio);
-                        cmd.Parameters.AddWithValue("@Latitude", (object?)cidade.Latitude ?? DBNull.Value);
-                        cmd.Parameters.AddWithValue("@Longitude", (object?)cidade.Longitude ?? DBNull.Value);
-
-                        cmd.ExecuteNonQuery();
+                        if (j > 0) sqlBuilder.Append(", ");
+                        sqlBuilder.Append($"(@CidadeId{j}, @Nome{j}, @Sigla{j}, @IBGEMunicipio{j}, @Latitude{j}, @Longitude{j})");
+                        
+                        cmd.Parameters.AddWithValue($"@CidadeId{j}", lote[j].CidadeId);
+                        cmd.Parameters.AddWithValue($"@Nome{j}", lote[j].Nome);
+                        cmd.Parameters.AddWithValue($"@Sigla{j}", lote[j].Sigla);
+                        cmd.Parameters.AddWithValue($"@IBGEMunicipio{j}", lote[j].IBGEMunicipio);
+                        cmd.Parameters.AddWithValue($"@Latitude{j}", (object?)lote[j].Latitude ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue($"@Longitude{j}", (object?)lote[j].Longitude ?? DBNull.Value);
                     }
 
-                    // 3. Se todas as 5.570 linhas executaram sem erro, confirma no banco
-                    transaction.Commit();
-                    sucesso = true;
+                    sqlBuilder.Append(@" ON DUPLICATE KEY UPDATE 
+                                        Nome = VALUES(Nome), 
+                                        Sigla = VALUES(Sigla), 
+                                        IBGEMunicipio = VALUES(IBGEMunicipio), 
+                                        Latitude = VALUES(Latitude), 
+                                        Longitude = VALUES(Longitude);");
+                        
+                    cmd.CommandText = sqlBuilder.ToString();
+                     cmd.ExecuteNonQuery();
                 }
+
+                transaction.Commit();
+                return true;
             }
             catch (Exception)
             {
@@ -57,7 +69,6 @@ namespace IntroAPI.Repository
                 {
                     transaction.Rollback();
                 }
-
                 throw; // Relança o erro original
             }
 
