@@ -10,7 +10,7 @@ namespace IntroController.Controllers
     /// <summary>
     /// Gerenciamento de alunos
     /// </summary>
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
     //[Authorize("APIAuth")  ]
     public class AlunosController : ControllerBase
@@ -319,36 +319,25 @@ namespace IntroController.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult UploadFoto(int id, [FromForm] IFormFile arquivo)
         {
+            if (id <= 0)
+                return BadRequest("Id do aluno inválido.");
+
+            var aluno = _alunoService.Obter(id);
+            if (aluno == null)
+                return NotFound("Aluno não encontrado.");
+
             try
             {
-                if (id <= 0)
-                    return BadRequest(new { erro = "Id inválido" });
+                bool sucesso = _alunoService.SalvarFoto(id, arquivo);
+                if (sucesso)
+                    return Ok(new { mensagem = "Foto enviada com sucesso!" });
 
-                if (arquivo == null)
-                    return BadRequest(new { erro = "Arquivo não fornecido" });
-
-                var alunoExistente = _alunoService.Obter(id);
-                if (alunoExistente == null)
-                    return NotFound(new { erro = "Aluno não encontrado" });
-
-                bool resultado = _alunoService.SalvarFoto(id, arquivo);
-
-                if (resultado)
-                    return Ok(new { mensagem = "Foto enviada com sucesso" });
-
-                return BadRequest(new { erro = "Falha ao salvar a foto" });
+                return BadRequest("Falha ao salvar a foto.");
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { erro = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return Problem(
-                    title: "Erro inesperado",
-                    detail: ex.Message,
-                    statusCode: StatusCodes.Status500InternalServerError
-                );
+                // Retorna a mensagem de erro da validação (tamanho, extensão, etc.)
+                return BadRequest(ex.Message);
             }
         }
 

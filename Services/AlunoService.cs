@@ -79,35 +79,27 @@ namespace IntroAPI.Services
         public bool SalvarFoto(int alunoId, IFormFile arquivo)
         {
             if (arquivo == null || arquivo.Length == 0)
-                throw new ArgumentException("O arquivo de foto é inválido.");
+                throw new ArgumentException("O arquivo de foto não foi fornecido.");
 
-            // Validação: aceitar apenas imagens
+            // Validação da extensão
             var extensoesPermitidas = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
             var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
 
             if (!extensoesPermitidas.Contains(extensao))
-                throw new ArgumentException("Apenas imagens (JPG, PNG, GIF, BMP) são permitidas.");
+                throw new ArgumentException("Apenas imagens (JPG, JPEG, PNG, GIF, BMP) são permitidas.");
 
-            // Validação: tamanho máximo 5MB
-            const long maxFileSize = 5 * 1024 * 1024; // 5MB
+            // Validação do tamanho (máximo 5MB)
+            const long maxFileSize = 5 * 1024 * 1024;
             if (arquivo.Length > maxFileSize)
                 throw new ArgumentException("A foto não pode exceder 5MB.");
 
-            try
-            {
-                using var stream = new MemoryStream();
-                arquivo.CopyTo(stream);
-                byte[] fotoBytes = stream.ToArray();
+            // Converte o arquivo recebido para um array de bytes
+            using var stream = new MemoryStream();
+            arquivo.CopyTo(stream);
+            byte[] fotoBytes = stream.ToArray();
 
-                _logger.LogInformation("Foto do aluno {alunoId} carregada com sucesso. Tamanho: {tamanho} bytes", alunoId, fotoBytes.Length);
-
-                return _alunoRepository.SalvarFoto(alunoId, fotoBytes);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao salvar foto do aluno {alunoId}", alunoId);
-                throw;
-            }
+            // Persiste no banco/repositório
+            return _alunoRepository.SalvarFoto(alunoId, fotoBytes);
         }
 
         /// <summary>

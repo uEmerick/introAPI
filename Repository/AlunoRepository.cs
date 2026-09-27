@@ -19,26 +19,19 @@ namespace IntroAPI.Repository
             {
                 using (var cmd = _context.GetConnection().CreateCommand())
                 {
-
                     if (aluno.Id == 0)
                     {
-                        cmd.CommandText = $@"insert into Aluno(Nome, CPF)
-                                       values (@Nome, @CPF)";
+                        cmd.CommandText = @"INSERT INTO Aluno(Nome, CPF) VALUES (@Nome, @CPF)";
                     }
                     else
                     {
-                        cmd.CommandText = $@"update Aluno
-                                     set Nome = @Nome, 
-                                         CPF = @CPF
-                                     where Id = @Id";
-
+                        cmd.CommandText = @"UPDATE Aluno SET Nome = @Nome, CPF = @CPF WHERE Id = @Id";
                         cmd.Parameters.AddWithValue("@Id", aluno.Id);
                     }
 
                     cmd.Parameters.AddWithValue("@Nome", aluno.Nome);
                     cmd.Parameters.AddWithValue("@CPF", aluno.CPF);
 
-                    //INSERT, DELETE, UPDATE E SP
                     cmd.ExecuteNonQuery();
 
                     if (aluno.Id == 0)
@@ -46,16 +39,13 @@ namespace IntroAPI.Repository
 
                     sucesso = true;
                 }
-
             }
             catch (Exception ex)
             {
                 throw;
-                //serilog...
             }
-           
-            return sucesso;
 
+            return sucesso;
         }
 
         public bool AlunoExistente(string cpf)
@@ -64,23 +54,17 @@ namespace IntroAPI.Repository
 
             try
             {
-
                 using (var cmd = _context.GetConnection().CreateCommand())
                 {
-                    cmd.CommandText = $@"select count(*) 
-                                     from Aluno
-                                     where CPF = @CPF";
+                    cmd.CommandText = @"SELECT COUNT(*) FROM Aluno WHERE CPF = @CPF";
+                    cmd.Parameters.AddWithValue("@CPF", cpf);
 
-                    //funções de agregação/ count/min/sum
                     existente = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
-                    //DateTime data = Convert.ToDateTime(cmd.ExecuteScalar());
                 }
-
             }
             catch (Exception ex)
             {
                 throw;
-                //serilog...
             }
 
             return existente;
@@ -88,147 +72,124 @@ namespace IntroAPI.Repository
 
         public IntroController.Entidades.Aluno Obter(int id)
         {
-
             IntroController.Entidades.Aluno aluno = null;
 
             try
             {
                 using (var cmd = _context.GetConnection().CreateCommand())
                 {
+                    cmd.CommandText = @"SELECT Id, Nome, CPF FROM Aluno WHERE Id = @Id";
+                    cmd.Parameters.AddWithValue("@Id", id);
 
-
-                    cmd.CommandText = $@"select Id, Nome, CPF
-                                     from Aluno
-                                     where Id = " + id;
-
-
-                    var dr = cmd.ExecuteReader();
-
-                    if (dr.Read())
+                    // 💡 CORREÇÃO: O 'using' fecha o DataReader logo após a leitura
+                    using (var dr = cmd.ExecuteReader())
                     {
-                        aluno = new IntroController.Entidades.Aluno();
-                        //aluno.Id = Convert.ToInt32(dr["Id"]);
-                        //aluno.Nome = dr["Nome"].ToString();
-                        //aluno.CPF = dr["CPF"].ToString();
-
-                        aluno.Id = dr.GetInt32("Id");
-                        aluno.Nome = dr.GetString("Nome");
-                        aluno.CPF = dr.GetString("CPF");
-
-                        //aluno.Id = Convert.ToInt32(dr[0]);
-                        //aluno.Nome = dr[1].ToString();
-                        //aluno.CPF = dr[2].ToString();
-                    }
-
+                        if (dr.Read())
+                        {
+                            aluno = new IntroController.Entidades.Aluno
+                            {
+                                Id = dr.GetInt32("Id"),
+                                Nome = dr.GetString("Nome"),
+                                CPF = dr.GetString("CPF")
+                            };
+                        }
+                    } // <- O DataReader é fechado e a conexão fica livre!
                 }
-
             }
             catch (Exception ex)
             {
                 throw;
-                //serilog...
             }
 
             return aluno;
-
         }
 
         public IEnumerable<IntroController.Entidades.Aluno> Consulta(string nome)
         {
-
             List<IntroController.Entidades.Aluno> alunos = new List<IntroController.Entidades.Aluno>();
+
             try
             {
-
                 using (var cmd = _context.GetConnection().CreateCommand())
                 {
-
-                    cmd.CommandText = $@"select Id, Nome, CPF
-                                     from Aluno
-                                     where Nome like @Nome";
-
+                    cmd.CommandText = @"SELECT Id, Nome, CPF FROM Aluno WHERE Nome LIKE @Nome";
                     cmd.Parameters.AddWithValue("@Nome", "%" + nome + "%");
-                    var dr = cmd.ExecuteReader();
 
-                    while (dr.Read())
+                    // 💡 CORREÇÃO: O 'using' garante o fechamento do leitor
+                    using (var dr = cmd.ExecuteReader())
                     {
-                        var aluno = new IntroController.Entidades.Aluno();
-                        aluno.Id = dr.GetInt32("Id");
-                        aluno.Nome = dr.GetString("Nome");
-                        aluno.CPF = dr.GetString("CPF");
-                        alunos.Add(aluno);
+                        while (dr.Read())
+                        {
+                            var aluno = new IntroController.Entidades.Aluno
+                            {
+                                Id = dr.GetInt32("Id"),
+                                Nome = dr.GetString("Nome"),
+                                CPF = dr.GetString("CPF")
+                            };
+                            alunos.Add(aluno);
+                        }
                     }
-
                 }
             }
             catch (Exception ex)
             {
                 throw;
-                //serilog...
             }
 
             return alunos;
-
         }
 
         public bool Excluir(int id)
         {
-
             bool excluido = false;
 
             try
             {
                 using (var cmd = _context.GetConnection().CreateCommand())
                 {
-
-                    cmd.CommandText = $@"delete from Aluno
-                                         where Id = " + id;
+                    cmd.CommandText = @"DELETE FROM Aluno WHERE Id = @Id";
+                    cmd.Parameters.AddWithValue("@Id", id);
 
                     cmd.ExecuteNonQuery();
                     excluido = true;
                 }
-               
             }
             catch (Exception ex)
             {
                 throw;
-                //serilog...
             }
 
             return excluido;
         }
 
-
         public bool SalvarLote(List<IntroController.Entidades.Aluno> alunos)
         {
             bool sucesso = false;
             MySql.Data.MySqlClient.MySqlTransaction transacao = null;
+
             try
             {
                 using (var cmd = _context.GetConnection().CreateCommand())
                 {
                     transacao = _context.GetConnection().BeginTransaction();
+
                     foreach (var aluno in alunos)
                     {
+                        cmd.Parameters.Clear(); // Limpa parâmetros das iterações anteriores
+
                         if (aluno.Id == 0)
                         {
-                            cmd.CommandText = $@"insert into Aluno(Nome, CPF)
-                                       values (@Nome, @CPF)";
+                            cmd.CommandText = @"INSERT INTO Aluno(Nome, CPF) VALUES (@Nome, @CPF)";
                         }
                         else
                         {
-                            cmd.CommandText = $@"update Aluno
-                                     set Nome = @Nome, 
-                                         CPF = @CPF
-                                     where Id = @Id";
-
+                            cmd.CommandText = @"UPDATE Aluno SET Nome = @Nome, CPF = @CPF WHERE Id = @Id";
                             cmd.Parameters.AddWithValue("@Id", aluno.Id);
                         }
 
                         cmd.Parameters.AddWithValue("@Nome", aluno.Nome);
                         cmd.Parameters.AddWithValue("@CPF", aluno.CPF);
 
-                        //INSERT, DELETE, UPDATE E SP
                         cmd.ExecuteNonQuery();
 
                         if (aluno.Id == 0)
@@ -238,19 +199,15 @@ namespace IntroAPI.Repository
                     transacao.Commit();
                     sucesso = true;
                 }
-
             }
             catch (Exception ex)
             {
-                transacao.Rollback();
+                transacao?.Rollback();
                 throw;
-                //serilog...
             }
 
             return sucesso;
-
         }
-
 
         public int Contar()
         {
@@ -260,16 +217,13 @@ namespace IntroAPI.Repository
             {
                 using (var cmd = _context.GetConnection().CreateCommand())
                 {
-
-                    cmd.CommandText = $@"select count(*) 
-                                         from Aluno";
+                    cmd.CommandText = @"SELECT COUNT(*) FROM Aluno";
                     conta = Convert.ToInt32(cmd.ExecuteScalar());
                 }
             }
             catch (Exception ex)
             {
                 throw;
-                //serilog...
             }
 
             return conta;
@@ -280,8 +234,6 @@ namespace IntroAPI.Repository
         /// </summary>
         public bool SalvarFoto(int alunoId, byte[] fotoBytes)
         {
-            bool sucesso = false;
-
             try
             {
                 using (var cmd = _context.GetConnection().CreateCommand())
@@ -291,15 +243,13 @@ namespace IntroAPI.Repository
                     cmd.Parameters.AddWithValue("@Foto", fotoBytes);
 
                     int linhasAfetadas = cmd.ExecuteNonQuery();
-                    sucesso = linhasAfetadas > 0;
+                    return linhasAfetadas > 0;
                 }
             }
             catch (Exception ex)
             {
                 throw new Exception($"Erro ao salvar foto do aluno: {ex.Message}", ex);
             }
-
-            return sucesso;
         }
 
         /// <summary>
@@ -307,8 +257,6 @@ namespace IntroAPI.Repository
         /// </summary>
         public bool DeletarFoto(int alunoId)
         {
-            bool sucesso = false;
-
             try
             {
                 using (var cmd = _context.GetConnection().CreateCommand())
@@ -317,17 +265,13 @@ namespace IntroAPI.Repository
                     cmd.Parameters.AddWithValue("@Id", alunoId);
 
                     int linhasAfetadas = cmd.ExecuteNonQuery();
-                    sucesso = linhasAfetadas > 0;
+                    return linhasAfetadas > 0;
                 }
             }
             catch (Exception ex)
             {
                 throw new Exception($"Erro ao deletar foto do aluno: {ex.Message}", ex);
             }
-
-            return sucesso;
         }
-
-
     }
 }
