@@ -252,6 +252,27 @@ namespace IntroAPI.Repository
             }
         }
 
+
+        /// <summary>
+        /// Obtem a foto de um aluno
+        /// </summary>
+        public byte[]? ObterFoto(int id)
+        {
+            using (var cmd = _context.GetConnection().CreateCommand())
+            {
+                cmd.CommandText = @"SELECT Foto FROM Aluno WHERE Id = @Id";
+                cmd.Parameters.AddWithValue("@Id", id);
+
+                var resultado = cmd.ExecuteScalar();
+
+                if (resultado != null && resultado != DBNull.Value)
+                {
+                    return (byte[])resultado;
+                }
+            }
+            return null;
+        }
+
         /// <summary>
         /// Deleta a foto de um aluno
         /// </summary>

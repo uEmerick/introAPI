@@ -109,15 +109,15 @@ namespace IntroAPI.Services
         {
             try
             {
-                var aluno = _alunoRepository.Obter(alunoId);
+                // 1. Retorna o array de bytes (byte[]) diretamente do repositório
+                byte[]? fotoBytes = _alunoRepository.ObterFoto(alunoId);
 
-                if (aluno == null)
-                    throw new ArgumentException("Aluno não encontrado.");
-
-                if (aluno.Foto == null || aluno.Foto.Length == 0)
+                // 2. Usa fotoBytes.Length diretamente 
+                if (fotoBytes == null || fotoBytes.Length == 0)
                     return null;
 
-                string base64 = Convert.ToBase64String(aluno.Foto);
+                // 3. Passa fotoBytes diretamente para o Convert 
+                string base64 = Convert.ToBase64String(fotoBytes);
                 _logger.LogInformation("Foto do aluno {alunoId} retornada em base64", alunoId);
 
                 return base64;
